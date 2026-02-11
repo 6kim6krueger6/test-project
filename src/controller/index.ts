@@ -1,2 +1,2 @@
-export * from './FileController';
-export * from './AuthController';
+export * from './file.controller.ts';
+export * from './auth.controller.ts';
