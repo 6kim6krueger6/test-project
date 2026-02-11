@@ -2,14 +2,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import {UserRepository, RefreshRepository} from "../repository";
+import {TOKEN_SETTINGS} from "../utils/constants.ts";
 
 export class AuthService {
     private readonly userRepo: UserRepository;
-    private readonly resreshRepo: RefreshRepository;
+    private readonly refreshRepo: RefreshRepository;
 
     constructor() {
         this.userRepo = new UserRepository();
-        this.resreshRepo = new RefreshRepository();
+        this.refreshRepo = new RefreshRepository();
     }
 
     async processSignUp(id: string, password: string) {
@@ -27,7 +28,7 @@ export class AuthService {
 
             const refreshToken = this.generateRefreshToken();
 
-            await this.resreshRepo.saveRefreshToken(refreshToken, newUser.id)
+            await this.refreshRepo.saveRefreshToken(refreshToken, newUser.id)
 
             return {
                 message: 'User has been created',
@@ -42,11 +43,46 @@ export class AuthService {
         }
     }
 
+    async processSignIn(id: string, password: string) {
+        try {
+            const user = await this.userRepo.findUserByEmailOrPhone(id);
+
+            if (!user) {
+                return {
+                    message: 'Invalid login or password',
+                }
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+
+            if (!isPasswordValid) {
+                return {
+                    message: 'Invalid login or password',
+                }
+            }
+
+            const accessToken = this.generateJWT(user.id);
+            const refreshToken = this.generateRefreshToken();
+            await this.refreshRepo.saveRefreshToken(refreshToken, user.id);
+
+            return {
+                message: 'Sign in successful',
+                accessToken,
+                refreshToken
+            }
+        } catch (error) {
+            console.error(error);
+            return {
+                message: 'Internal server error'
+            }
+        }
+    }
+
     private generateJWT(userId: number) {
         return jwt.sign(
             {id: userId},
-            Bun.env.JWT_SECRET!,
-            {expiresIn: '10m'}
+            TOKEN_SETTINGS.ACCESS.SECRET!,
+            {expiresIn: TOKEN_SETTINGS.ACCESS.EXPIRES_IN_STRING}
         )
     }
 

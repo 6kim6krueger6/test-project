@@ -5,6 +5,8 @@ const app = express();
 
 app.use(express.json());
 
+app
+
 app.use("/auth" , new AuthController().router)
 app.use("/file", new FileController().router);
 
