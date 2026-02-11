@@ -119,6 +119,54 @@ export class AuthService {
         }
     }
 
+     getUserId(refreshToken: string) {
+       try {
+           const payload = jwt.verify(
+               refreshToken,
+               TOKEN_SETTINGS.REFRESH.SECRET
+           ) as { id: number };
+
+           if (payload) {
+               return {
+                   id: payload.id,
+                   message: 'Id has been retrieved successfully'
+               }
+           } else {
+               return {
+                   message: "No retrieved token",
+               }
+           }
+       } catch (error) {
+           console.error(error);
+           return {
+               message: "Internal server error",
+           };
+       }
+    }
+
+    async processLogOut(refreshToken: string) {
+        try {
+            const isDeleted = await this.refreshRepo.deleteRefreshToken(refreshToken);
+            if (isDeleted) {
+                return {
+                    message: 'LogOut successfully',
+                    isSuccess: true
+                }
+            } else {
+                return {
+                    message: 'Internal server error',
+                    isSuccess: false
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            return {
+                message: "Internal server error",
+                isSuccess: false
+            };
+        }
+    }
+
     private generateJWT(userId: number) {
         return jwt.sign(
             {id: userId},

@@ -52,14 +52,56 @@ export class AuthController {
             return response.status(401).json({message: "Refresh token not found"});
         }
 
-        const result = await this.authService.processTokenRefresh(request.cookies[COOKIE_NAMES.REFRESH_TOKEN]);
+        const result = await this.authService.processTokenRefresh(oldRefreshToken);
 
         return this.sendAuthResponse(response, result);
     }
 
-    private async getUserInfo(request: Request, response: Response) {}
+    private async getUserInfo(request: RequestWithCookies<{accessToken: string}>, response: Response) {
+        const accessToken = request.cookies[COOKIE_NAMES.ACCESS_TOKEN];
 
-    private async logOut(request: Request, response: Response) {}
+        if (!accessToken) {
+            return response.status(401).json({message: "Access token not found"});
+        }
+
+        const result = this.authService.getUserId(accessToken);
+
+        if (!result.id) {
+            return response.status(401).json({message: result.message});
+        } else {
+            return response.status(200).json({
+                id: result.id,
+                message: result.message
+            });
+        }
+
+    }
+
+    private async logOut(request: RequestWithCookies<{refreshToken: string}>, response: Response) {
+        const oldRefreshToken = request.cookies[COOKIE_NAMES.REFRESH_TOKEN];
+
+        if (oldRefreshToken) {
+            const result = await this.authService.processLogOut(oldRefreshToken);
+
+            response.clearCookie(COOKIE_NAMES.ACCESS_TOKEN, {
+                httpOnly: true,
+                path: '/'
+            });
+
+            response.clearCookie(COOKIE_NAMES.REFRESH_TOKEN, {
+                httpOnly: true,
+                path: '/'
+            });
+
+            if (result.isSuccess) {
+                response.status(200).json({message: result.message});
+            } else {
+                return response.status(500).json({message: result.message});
+            }
+        } else {
+            return response.status(401).json({message: "Unauthorized"});
+        }
+    }
 
     private sendAuthResponse(response: Response, result: {
         accessToken?: string;
