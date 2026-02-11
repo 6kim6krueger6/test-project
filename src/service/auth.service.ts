@@ -78,6 +78,47 @@ export class AuthService {
         }
     }
 
+
+    async processTokenRefresh(refreshToken: string) {
+        try {
+            const tokenRecord = await this.refreshRepo.getRefreshDataByToken(refreshToken);
+
+            if (!tokenRecord) {
+                return {
+                    message: "Invalid refresh token",
+                };
+            }
+
+            const tokenAge = new Date().getTime() - tokenRecord.createdAt.getTime();
+
+            if (tokenAge > TOKEN_SETTINGS.REFRESH.MAX_AGE_MS) {
+                await this.refreshRepo.deleteRefreshToken(refreshToken);
+
+                return {
+                    message: 'Refresh token expired',
+                }
+            }
+
+            await this.refreshRepo.deleteRefreshToken(refreshToken);
+
+            const newAccessToken = this.generateJWT(tokenRecord.userId);
+            const newRefreshToken = this.generateRefreshToken();
+
+            await this.refreshRepo.saveRefreshToken(newRefreshToken, tokenRecord.userId);
+
+            return {
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+                message: "Token refreshed successfully"
+            }
+        } catch (error) {
+            console.error("Refresh Error:", error);
+            return {
+                message: "Internal server error",
+            };
+        }
+    }
+
     private generateJWT(userId: number) {
         return jwt.sign(
             {id: userId},

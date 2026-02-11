@@ -2,6 +2,7 @@ import {type Request, type Response, Router} from "express";
 import type {SignInDto, SignUpDto} from "../dto/auth.dto.ts";
 import {AuthService} from "../service";
 import {BASE_COOKIE_OPTIONS, COOKIE_NAMES, TOKEN_SETTINGS} from "../utils/constants.ts";
+import type {RequestWithCookies} from "../types/express";
 
 export class AuthController {
     router: Router;
@@ -44,7 +45,17 @@ export class AuthController {
         return this.sendAuthResponse(response, result);
     }
 
-    private async refreshToken(request: Request, response: Response) {}
+    private async refreshToken(request: RequestWithCookies<{refreshToken: string}>, response: Response) {
+        const oldRefreshToken = request.cookies[COOKIE_NAMES.REFRESH_TOKEN];
+
+        if (!oldRefreshToken) {
+            return response.status(401).json({message: "Refresh token not found"});
+        }
+
+        const result = await this.authService.processTokenRefresh(request.cookies[COOKIE_NAMES.REFRESH_TOKEN]);
+
+        return this.sendAuthResponse(response, result);
+    }
 
     private async getUserInfo(request: Request, response: Response) {}
 
