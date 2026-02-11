@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  loginId  String @unique
+  password String
+
+  files  File[]
+  tokens RefreshToken[]
+}
+
+model File {
+  id         Int      @id @default(autoincrement())
+  name       String
+  extension  String
+  mimeType   String
+  size       Int
+  uploadDate DateTime @default(now())
+  path       String
+
+  userId Int
+  User   User @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  userId Int
+  User   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
