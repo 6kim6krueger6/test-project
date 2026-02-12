@@ -24,16 +24,13 @@ export class AuthService {
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
-
             const newUser = await this.userRepo.createUser(id, hashedPassword);
-
             const refreshToken = this.generateRefreshToken();
-
-            await this.refreshRepo.saveRefreshToken(refreshToken, newUser.id)
+            const refreshData = await this.refreshRepo.saveRefreshToken(refreshToken, newUser.id);
 
             return {
                 message: 'User has been created',
-                accessToken: this.generateJWT(newUser.id),
+                accessToken: this.generateJWT(newUser.id, refreshData.id),
                 refreshToken
             }
         } catch (error) {
@@ -62,13 +59,12 @@ export class AuthService {
                 }
             }
 
-            const accessToken = this.generateJWT(user.id);
             const refreshToken = this.generateRefreshToken();
-            await this.refreshRepo.saveRefreshToken(refreshToken, user.id);
+            const refreshData = await this.refreshRepo.saveRefreshToken(refreshToken, user.id);
 
             return {
                 message: 'Sign in successful',
-                accessToken,
+                accessToken: this.generateJWT(user.id, refreshData.id),
                 refreshToken
             }
         } catch (error) {
@@ -102,13 +98,11 @@ export class AuthService {
 
             await this.refreshRepo.deleteRefreshToken(refreshToken);
 
-            const newAccessToken = this.generateJWT(tokenRecord.userId);
             const newRefreshToken = this.generateRefreshToken();
-
-            await this.refreshRepo.saveRefreshToken(newRefreshToken, tokenRecord.userId);
+            const newRefreshData = await this.refreshRepo.saveRefreshToken(newRefreshToken, tokenRecord.userId);
 
             return {
-                accessToken: newAccessToken,
+                accessToken: this.generateJWT(tokenRecord.userId, newRefreshData.id),
                 refreshToken: newRefreshToken,
                 message: "Token refreshed successfully"
             }
@@ -120,19 +114,20 @@ export class AuthService {
         }
     }
 
-     getUserId(accessToken: string) {
+    async getUserId(accessToken: string) {
        try {
            const payload = decodeJwt(accessToken)
+           const session = await this.refreshRepo.getRefreshDataById(payload.sid);
 
-           if (payload) {
+           if (!session) {
                return {
-                   id: payload.id,
-                   message: 'Id has been retrieved successfully'
+                   message: "Session has expired",
                }
-           } else {
-               return {
-                   message: "No retrieved token",
-               }
+           }
+
+           return {
+               id: payload.id,
+               message: 'Id has been retrieved successfully'
            }
        } catch (error) {
            console.error(error);
@@ -140,6 +135,27 @@ export class AuthService {
                message: "Internal server error",
            };
        }
+    }
+
+    async validateAccessToken(accessToken: string) {
+        try {
+            const payload = decodeJwt(accessToken);
+            const session = await this.refreshRepo.getRefreshDataById(payload.sid);
+
+            if (!session || session.userId !== payload.id) {
+                return { message: "Session has expired" };
+            }
+
+            return {
+                userId: payload.id,
+                message: "Authorized"
+            }
+        } catch (error) {
+            console.error(error);
+            return {
+                message: "Invalid access token"
+            }
+        }
     }
 
     async processLogOut(refreshToken: string) {
@@ -152,7 +168,7 @@ export class AuthService {
                 }
             } else {
                 return {
-                    message: 'Internal server error',
+                    message: 'Unauthorized',
                     isSuccess: false
                 }
             }
@@ -165,9 +181,9 @@ export class AuthService {
         }
     }
 
-    private generateJWT(userId: number) {
+    private generateJWT(userId: number, sid: number) {
         return jwt.sign(
-            {id: userId},
+            {id: userId, sid},
             TOKEN_SETTINGS.ACCESS.SECRET!,
             {expiresIn: TOKEN_SETTINGS.ACCESS.EXPIRES_IN_STRING}
         )

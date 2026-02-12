@@ -24,6 +24,12 @@ export class RefreshRepository {
         })
     }
 
+    async getRefreshDataById(id: number) {
+        return this.prismaClient.prisma.refreshToken.findUnique({
+            where: { id }
+        });
+    }
+
     async deleteRefreshToken(refreshToken: string){
          const result = await this.prismaClient.prisma.refreshToken.deleteMany({
             where: {

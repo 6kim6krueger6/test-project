@@ -13,8 +13,23 @@ export class FileService {
         return this.fileRepository.saveFile(fileData);
     }
 
-    async deleteFile(fileId: number) {
-        const file = await this.fileRepository.getFileById(fileId);
+    async getFiles(userId: number, page: number, listSize: number) {
+        const safePage = Math.max(1, page);
+        const safeListSize = Math.max(1, listSize);
+        const skip = (safePage - 1) * safeListSize;
+
+        const { items, total } = await this.fileRepository.listFiles(userId, skip, safeListSize);
+
+        return {
+            page: safePage,
+            listSize: safeListSize,
+            total,
+            files: items
+        };
+    }
+
+    async deleteFile(fileId: number, userId: number) {
+        const file = await this.fileRepository.getFileByIdForUser(fileId, userId);
 
         if (!file) {
             throw new Error("File not found in database");
@@ -34,9 +49,9 @@ export class FileService {
         return { message: "File deleted successfully" }
     }
 
-    async getFileById(fileId: number) {
+    async getFileById(fileId: number, userId: number) {
         try {
-            const file = await this.fileRepository.getFileById(fileId);
+            const file = await this.fileRepository.getFileByIdForUser(fileId, userId);
 
             if (file) {
                 return {
@@ -56,8 +71,8 @@ export class FileService {
         }
     }
 
-    async updateFile(id: number, newData: FileUploadDto) {
-        const oldFile = await this.fileRepository.getFileById(id);
+    async updateFile(id: number, userId: number, newData: FileUploadDto) {
+        const oldFile = await this.fileRepository.getFileByIdForUser(id, userId);
 
         if (!oldFile) {
             if (fs.existsSync(newData.path)) fs.unlinkSync(newData.path);
