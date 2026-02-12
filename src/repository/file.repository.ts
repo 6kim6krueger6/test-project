@@ -21,4 +21,18 @@ export class FileRepository{
         });
     }
 
+    async deleteFile(fileId: number) {
+         return this.prismaClient.prisma.file.delete({
+             where: {
+                 id: fileId,
+             }
+         });
+    }
+
+    async getFileById(fileId: number) {
+        return this.prismaClient.prisma.file.findUnique({
+            where: { id: fileId }
+        });
+    }
+
 }

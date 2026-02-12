@@ -69,7 +69,28 @@ export class FileController {
 
     private async getFiles(request: Request, response: Response) {}
 
-    private async deleteFile(request: Request, response: Response) {}
+    private async deleteFile(request: Request<{ id: string; }>, response: Response) {
+        try {
+            const { id } = request.params;
+            const fileId = Number(id);
+
+            if (isNaN(fileId)) {
+                return response.status(400).json({ message: "Invalid ID format" });
+            }
+
+            const result = await this.fileService.deleteFile(fileId);
+
+            return response.status(200).json({ message: result.message });
+        } catch (error) {
+            console.error("Delete file error:", error);
+
+            if (error instanceof Error && error.message.includes("not found")) {
+                return response.status(404).json({ message: "File not found" });
+            }
+
+            return response.status(500).json({ message: "Internal server error" });
+        }
+    }
 
     private async getFile(request: Request, response: Response) {}
 
