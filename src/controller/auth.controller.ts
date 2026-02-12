@@ -122,8 +122,6 @@ export class AuthController {
 
             return response.status(200).json({
                 message: result.message,
-                accessToken: result.accessToken,
-                refreshToken: result.refreshToken
             });
         }
 

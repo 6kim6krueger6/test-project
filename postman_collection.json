@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "ERP.AERO API",
+    "description": "Коллекция для тестирования REST API по ТЗ ERP.AERO (auth + file).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "id", "value": "test@example.com" },
+    { "key": "password", "value": "password123" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "fileId", "value": "1" },
+    { "key": "page", "value": "1" },
+    { "key": "list_size", "value": "10" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{id}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/signup"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 or 409', function () {",
+                  "  pm.expect([200,409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Signin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{id}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/signin"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const json = pm.response.json();",
+                  "pm.expect(json).to.have.property('accessToken');",
+                  "pm.expect(json).to.have.property('refreshToken');",
+                  "pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', json.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/info"
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Cookie", "value": "refreshToken={{refreshToken}}" }
+            ],
+            "url": "{{baseUrl}}/signin/new_token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const json = pm.response.json();",
+                  "pm.expect(json).to.have.property('accessToken');",
+                  "pm.expect(json).to.have.property('refreshToken');",
+                  "pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "pm.collectionVariables.set('refreshToken', json.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "refreshToken={{refreshToken}}; accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/logout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set('accessToken', '');",
+                  "pm.collectionVariables.set('refreshToken', '');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "File",
+      "item": [
+        {
+          "name": "Upload file",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/file/upload"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(201);",
+                  "const json = pm.response.json();",
+                  "if (json.file && json.file.id) {",
+                  "  pm.collectionVariables.set('fileId', String(json.file.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List files",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/file/list?page={{page}}&list_size={{list_size}}"
+          }
+        },
+        {
+          "name": "Get file by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/file/{{fileId}}"
+          }
+        },
+        {
+          "name": "Download file",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/file/download/{{fileId}}"
+          }
+        },
+        {
+          "name": "Update file",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/file/update/{{fileId}}"
+          }
+        },
+        {
+          "name": "Delete file",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Cookie", "value": "accessToken={{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/file/delete/{{fileId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,7 +9,7 @@ export const COOKIE_NAMES = {
 
 export const TOKEN_SETTINGS = {
     ACCESS: {
-        SECRET: Bun.env.JWT_ACCESS_SECRET!,
+        SECRET: Bun.env.JWT_SECRET!,
         EXPIRES_IN_STRING: '10m',
         MAX_AGE_MS: 10 * 60 * 1000,
     },
