@@ -35,4 +35,17 @@ export class FileRepository{
         });
     }
 
+    async updateFile(id: number, data: FileUploadDto) {
+        return this.prismaClient.prisma.file.update({
+            where: { id: id },
+            data: {
+                name: data.name,
+                extension: data.extension,
+                mimeType: data.mimeType,
+                size: data.size,
+                path: data.path,
+            }
+        });
+    }
+
 }

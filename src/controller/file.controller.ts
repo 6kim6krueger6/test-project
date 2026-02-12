@@ -23,7 +23,7 @@ export class FileController {
         this.router.delete("/delete/:id", this.deleteFile.bind(this) );
         this.router.get("/:id", this.getFile.bind(this) );
         this.router.get("/download/:id", this.downloadFile.bind(this) );
-        this.router.put("/update/:id", this.updateFile.bind(this) );
+        this.router.put("/update/:id", uploadMiddleware.single("file"), this.updateFile.bind(this) );
     }
 
     private async uploadFile(request: RequestWithCookies<{accessToken: string}>, response: Response) {
@@ -120,7 +120,57 @@ export class FileController {
 
     private downloadFile(request: Request, response: Response) {}
 
-    private updateFile(request: Request, response: Response) {}
+    private async updateFile(request: RequestWithCookies<{ id: string }>, response: Response) {
+        try {
+            const { id } = request.params;
+            const fileId = Number(id);
+
+            if (isNaN(fileId)) {
+                return response.status(400).json({ message: "Invalid file ID format" });
+            }
+
+            const accessToken = request.cookies[COOKIE_NAMES.ACCESS_TOKEN];
+            if (!accessToken) {
+                return response.status(401).json({ message: "Access token not found" });
+            }
+
+            if (!request.file) {
+                return response.status(400).json({ message: "No new file uploaded" });
+            }
+
+            const userId = decodeJwt(accessToken).id;
+
+            const file = request.file;
+
+            const fileUpdateData = {
+                name: file.originalname,
+                extension: path.extname(file.originalname),
+                mimeType: file.mimetype,
+                size: file.size,
+                path: file.path,
+                userId: userId
+            };
+
+            const updatedFile = await this.fileService.updateFile(fileId, fileUpdateData);
+
+            return response.status(200).json({
+                message: "File updated successfully",
+                file: updatedFile
+            });
+
+        } catch (error) {
+            console.error("Update error:", error);
+            if (error instanceof Error && error.message.includes("not found")) {
+                return response.status(404).json({ message: "File not found" });
+            }
+
+            if (error instanceof jwt.JsonWebTokenError) {
+                return response.status(403).json({ message: "Invalid token" });
+            }
+
+            return response.status(500).json({ message: "Internal server error" });
+        }
+    }
 
 }
 

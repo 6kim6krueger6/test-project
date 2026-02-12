@@ -55,4 +55,23 @@ export class FileService {
             };
         }
     }
+
+    async updateFile(id: number, newData: FileUploadDto) {
+        const oldFile = await this.fileRepository.getFileById(id);
+
+        if (!oldFile) {
+            if (fs.existsSync(newData.path)) fs.unlinkSync(newData.path);
+            throw new Error("File not found");
+        }
+
+        try {
+            if (fs.existsSync(oldFile.path)) {
+                fs.unlinkSync(oldFile.path);
+            }
+        } catch (err) {
+            console.error(`Failed to delete old file: ${oldFile.path}`, err);
+        }
+
+        return this.fileRepository.updateFile(id, newData);
+    }
 }
