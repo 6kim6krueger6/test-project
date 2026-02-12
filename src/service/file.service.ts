@@ -33,4 +33,26 @@ export class FileService {
         }
         return { message: "File deleted successfully" }
     }
+
+    async getFileById(fileId: number) {
+        try {
+            const file = await this.fileRepository.getFileById(fileId);
+
+            if (file) {
+                return {
+                    message: "Successfully got file with id " + fileId,
+                    file
+                }
+            } else {
+                return {
+                    message: "File not found"
+                }
+            }
+        } catch (err) {
+            console.error(`Failed to get file with id ${fileId}`, err);
+            return {
+                message: "Failed to get file with id " + fileId
+            };
+        }
+    }
 }
