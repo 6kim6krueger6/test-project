@@ -64,7 +64,7 @@ export class AuthController {
             return response.status(401).json({message: "Access token not found"});
         }
 
-        const result = this.authService.getUserId(accessToken);
+        const result = await this.authService.getUserId(accessToken);
 
         if (!result.id) {
             return response.status(401).json({message: result.message});
@@ -96,7 +96,7 @@ export class AuthController {
             if (result.isSuccess) {
                 response.status(200).json({message: result.message});
             } else {
-                return response.status(500).json({message: result.message});
+                return response.status(401).json({message: result.message});
             }
         } else {
             return response.status(401).json({message: "Unauthorized"});
@@ -120,10 +120,14 @@ export class AuthController {
                 maxAge: TOKEN_SETTINGS.REFRESH.MAX_AGE_MS
             });
 
-            return response.status(200).json({ message: result.message });
-        } else {
-            return response.status(500).json({ message: result.message });
+            return response.status(200).json({
+                message: result.message,
+                accessToken: result.accessToken,
+                refreshToken: result.refreshToken
+            });
         }
 
+        const status = result.message.includes("already exist") ? 409 : 401;
+        return response.status(status).json({ message: result.message });
     }
 }

@@ -14,13 +14,9 @@ export const TOKEN_SETTINGS = {
         MAX_AGE_MS: 10 * 60 * 1000,
     },
     REFRESH: {
-        SECRET: Bun.env.JWT_REFRESH_SECRET!,
-        EXPIRES_IN_DAYS: 30,
         MAX_AGE_MS: 30 * 24 * 60 * 60 * 1000,
     }
 } as const;
-
-
 
 export const BASE_COOKIE_OPTIONS: CookieOptions = {
     httpOnly: true,

@@ -35,6 +35,26 @@ export class FileRepository{
         });
     }
 
+    async getFileByIdForUser(fileId: number, userId: number) {
+        return this.prismaClient.prisma.file.findFirst({
+            where: { id: fileId, userId }
+        });
+    }
+
+    async listFiles(userId: number, skip: number, take: number) {
+        const [items, total] = await Promise.all([
+            this.prismaClient.prisma.file.findMany({
+                where: { userId },
+                orderBy: { uploadDate: "desc" },
+                skip,
+                take
+            }),
+            this.prismaClient.prisma.file.count({ where: { userId } })
+        ]);
+
+        return { items, total };
+    }
+
     async updateFile(id: number, data: FileUploadDto) {
         return this.prismaClient.prisma.file.update({
             where: { id: id },
