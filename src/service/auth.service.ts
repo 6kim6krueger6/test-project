@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import {UserRepository, RefreshRepository} from "../repository";
 import {TOKEN_SETTINGS} from "../utils/constants.ts";
+import {decodeJwt} from "../utils/jwt.decoder.ts";
 
 export class AuthService {
     private readonly userRepo: UserRepository;
@@ -119,12 +120,9 @@ export class AuthService {
         }
     }
 
-     getUserId(refreshToken: string) {
+     getUserId(accessToken: string) {
        try {
-           const payload = jwt.verify(
-               refreshToken,
-               TOKEN_SETTINGS.REFRESH.SECRET
-           ) as { id: number };
+           const payload = decodeJwt(accessToken)
 
            if (payload) {
                return {

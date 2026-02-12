@@ -1,15 +1,24 @@
 import {type Request, type Response, Router } from "express";
+import {uploadMiddleware} from "../middleware/upload.ts";
+import path from "path";
+import type {RequestWithCookies} from "../types/express";
+import {COOKIE_NAMES} from "../utils/constants.ts";
+import {decodeJwt} from "../utils/jwt.decoder.ts";
+import {FileService} from "../service";
+import jwt from "jsonwebtoken";
 
 export class FileController {
     router: Router;
+    private readonly fileService: FileService;
 
     constructor() {
         this.router = Router();
+        this.fileService = new FileService();
         this.initRoutes();
     }
 
     private initRoutes() {
-        this.router.post("/upload", this.uploadFile.bind(this));
+        this.router.post("/upload", uploadMiddleware.single("file"), this.uploadFile.bind(this));
         this.router.get("/list", this.getFiles.bind(this) );
         this.router.delete("/delete/:id", this.deleteFile.bind(this) );
         this.router.get("/:id", this.getFile.bind(this) );
@@ -17,17 +26,56 @@ export class FileController {
         this.router.put("/update/:id", this.updateFile.bind(this) );
     }
 
-    private async uploadFile(req: Request, res: Response) {}
+    private async uploadFile(request: RequestWithCookies<{accessToken: string}>, response: Response) {
+        const accessToken = request.cookies[COOKIE_NAMES.ACCESS_TOKEN];
 
-    private async getFiles(req: Request, res: Response) {}
+        if (!accessToken) {
+            return response.status(401).json({message: "Access token not found"});
+        }
+        try {
+            if (!request.file) {
+                return response.status(400).json({ message: "No file uploaded" });
+            }
 
-    private async deleteFile(req: Request, res: Response) {}
+            const file = request.file;
+            const userId = decodeJwt(accessToken).id;
 
-    private async getFile(req: Request, res: Response) {}
+            const fileData = {
+                name: file.originalname,
+                extension: path.extname(file.originalname),
+                mimeType: file.mimetype,
+                size: file.size,
+                path: file.path,
+                userId
+            };
 
-    private downloadFile(req: Request, res: Response) {}
+            const savedFile = await this.fileService.uploadFile(fileData);
 
-    private updateFile(req: Request, res: Response) {}
+            return response.status(201).json({
+                message: "File uploaded successfully",
+                file: savedFile
+            });
+
+        } catch (error) {
+            console.error("Upload error:", error);
+
+            if (error instanceof jwt.JsonWebTokenError) {
+                return response.status(403).json({ message: "Invalid token" });
+            }
+
+            return response.status(500).json({ message: "Internal server error" });
+        }
+    }
+
+    private async getFiles(request: Request, response: Response) {}
+
+    private async deleteFile(request: Request, response: Response) {}
+
+    private async getFile(request: Request, response: Response) {}
+
+    private downloadFile(request: Request, response: Response) {}
+
+    private updateFile(request: Request, response: Response) {}
 
 }
 

@@ -1,20 +1,14 @@
-import {PrismaClient} from "../generated/prisma/client.ts";
-import {PrismaMariaDb} from "@prisma/adapter-mariadb";
+import {prisma, PrismaRepository} from "./prisma.client.ts";
 
 export class RefreshRepository {
-    prisma: PrismaClient;
+    prismaClient: PrismaRepository;
 
     constructor() {
-        const adapter = new PrismaMariaDb({
-            host: Bun.env.DB_HOST,
-            port: parseInt(Bun.env.DB_PORT!),
-            connectionLimit: 5
-        })
-        this.prisma = new PrismaClient({adapter});
+        this.prismaClient = prisma;
     }
 
     async saveRefreshToken(refreshToken: string, userId: number){
-        return this.prisma.refreshToken.create({
+        return this.prismaClient.prisma.refreshToken.create({
             data: {
                 token: refreshToken,
                 userId
@@ -23,7 +17,7 @@ export class RefreshRepository {
     }
 
     async getRefreshDataByToken(refreshToken: string){
-        return this.prisma.refreshToken.findFirst({
+        return this.prismaClient.prisma.refreshToken.findFirst({
             where: {
                 token: refreshToken
             }
@@ -31,7 +25,7 @@ export class RefreshRepository {
     }
 
     async deleteRefreshToken(refreshToken: string){
-         const result = await this.prisma.refreshToken.deleteMany({
+         const result = await this.prismaClient.prisma.refreshToken.deleteMany({
             where: {
                 token: refreshToken
             }

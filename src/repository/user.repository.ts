@@ -1,26 +1,18 @@
-import {PrismaClient} from "../generated/prisma/client";
-import {PrismaMariaDb} from "@prisma/adapter-mariadb";
+import {prisma, PrismaRepository} from "./prisma.client.ts";
 
 export class UserRepository {
-    prisma: PrismaClient;
+    prismaClient: PrismaRepository;
 
     constructor() {
-        const adapter = new PrismaMariaDb({
-            host: Bun.env.DB_HOST,
-            port: parseInt(Bun.env.DB_PORT!),
-            connectionLimit: 5
-        })
-        this.prisma = new PrismaClient({adapter});
-
-
+        this.prismaClient = prisma;
     }
 
     async findUserByEmailOrPhone(id: string) {
-        return this.prisma.user.findUnique({where: {loginId: id}});
+        return this.prismaClient.prisma.user.findUnique({where: {loginId: id}});
     }
 
     async createUser (id: string, hashedPassword: string) {
-        return this.prisma.user.create({
+        return this.prismaClient.prisma.user.create({
             data: {
                 loginId: id,
                 password: hashedPassword,
