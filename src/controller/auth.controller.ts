@@ -3,6 +3,8 @@ import type {SignInDto, SignUpDto} from "../dto/auth.dto.ts";
 import {AuthService} from "../service";
 import {BASE_COOKIE_OPTIONS, COOKIE_NAMES, TOKEN_SETTINGS} from "../utils/constants.ts";
 import type {RequestWithCookies} from "../types/express";
+import {joiValidationMiddleware} from "../middleware/joi.validation.ts";
+import { signUpSchema, signInSchema } from "../validation/auth.validation.ts";
 
 export class AuthController {
     router: Router;
@@ -15,9 +17,9 @@ export class AuthController {
     }
 
     private initRoutes() {
-        this.router.post("/signin", this.processSignIn.bind(this));
+        this.router.post("/signin", joiValidationMiddleware({ body: signInSchema }), this.processSignIn.bind(this));
         this.router.post("/signin/new_token", this.refreshToken.bind(this));
-        this.router.post("/signup", this.processSignUp.bind(this));
+        this.router.post("/signup", joiValidationMiddleware({ body: signUpSchema }), this.processSignUp.bind(this));
         this.router.get("/info", this.getUserInfo.bind(this));
         this.router.get("/logout", this.logOut.bind(this));
     }
@@ -25,10 +27,6 @@ export class AuthController {
 
     private async processSignIn(request: Request<never, never, SignInDto>, response: Response) {
         const body = request.body;
-        if (!body.id || !body.password) {
-            return response.status(400).json({message: "No credentials"});
-        }
-
         const result = await this.authService.processSignIn(body.id, body.password);
 
         return this.sendAuthResponse(response, result);
@@ -36,10 +34,6 @@ export class AuthController {
 
     private async processSignUp(request: Request<never, never, SignUpDto>, response: Response) {
         const body = request.body;
-        if (!body.id || !body.password) {
-            return response.status(400).json({message: "No credentials"});
-        }
-
         const result = await this.authService.processSignUp(body.id, body.password);
 
         return this.sendAuthResponse(response, result);

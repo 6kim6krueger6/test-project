@@ -4,6 +4,8 @@ import path from "path";
 import type {RequestWithCookies} from "../types/express";
 import {COOKIE_NAMES} from "../utils/constants.ts";
 import {FileService, AuthService} from "../service";
+import {joiValidationMiddleware} from "../middleware/joi.validation.ts";
+import { fileIdSchema, getFilesSchema } from "../validation/file.validation.ts";
 
 export class FileController {
     router: Router;
@@ -19,11 +21,11 @@ export class FileController {
 
     private initRoutes() {
         this.router.post("/upload", uploadMiddleware.single("file"), this.uploadFile.bind(this));
-        this.router.get("/list", this.getFiles.bind(this) );
-        this.router.delete("/delete/:id", this.deleteFile.bind(this) );
-        this.router.get("/download/:id", this.downloadFile.bind(this) );
-        this.router.put("/update/:id", uploadMiddleware.single("file"), this.updateFile.bind(this) );
-        this.router.get("/:id", this.getFile.bind(this) );
+        this.router.get("/list", joiValidationMiddleware({ query: getFilesSchema }), this.getFiles.bind(this) );
+        this.router.delete("/delete/:id", joiValidationMiddleware({ params: fileIdSchema }), this.deleteFile.bind(this) );
+        this.router.get("/download/:id", joiValidationMiddleware({ params: fileIdSchema }), this.downloadFile.bind(this) );
+        this.router.put("/update/:id", uploadMiddleware.single("file"), joiValidationMiddleware({ params: fileIdSchema }), this.updateFile.bind(this) );
+        this.router.get("/:id", joiValidationMiddleware({ params: fileIdSchema }), this.getFile.bind(this) );
     }
 
     private async getAuthorizedUserId(request: RequestWithCookies<{accessToken: string}>, response: Response) {
@@ -85,12 +87,8 @@ export class FileController {
             return;
         }
 
-        const page = Number(request.query.page ?? 1);
-        const listSize = Number(request.query.list_size ?? 10);
-
-        if (isNaN(page) || isNaN(listSize)) {
-            return response.status(400).json({ message: "Invalid pagination params" });
-        }
+        const page = (request.query.page as unknown as number) ?? 1;
+        const listSize = (request.query.list_size as unknown as number) ?? 10;
 
         const files = await this.fileService.getFiles(userId, page, listSize);
 
@@ -104,12 +102,7 @@ export class FileController {
         }
 
         try {
-            const { id } = request.params;
-            const fileId = Number(id);
-
-            if (isNaN(fileId)) {
-                return response.status(400).json({ message: "Invalid ID format" });
-            }
+            const fileId = Number(request.params.id);
 
             const result = await this.fileService.deleteFile(fileId, userId);
 
@@ -132,12 +125,7 @@ export class FileController {
         }
 
         try {
-            const { id } = request.params;
-            const fileId = Number(id);
-
-            if (isNaN(fileId)) {
-                return response.status(400).json({ message: "Invalid ID format" });
-            }
+            const fileId = Number(request.params.id);
 
             const result = await this.fileService.getFileById(fileId, userId);
             if (result.file) {
@@ -164,10 +152,6 @@ export class FileController {
 
         const fileId = Number(request.params.id);
 
-        if (isNaN(fileId)) {
-            return response.status(400).json({ message: "Invalid ID format" });
-        }
-
         const result = await this.fileService.getFileById(fileId, userId);
 
         if (!result.file) {
@@ -184,12 +168,7 @@ export class FileController {
         }
 
         try {
-            const { id } = request.params;
-            const fileId = Number(id);
-
-            if (isNaN(fileId)) {
-                return response.status(400).json({ message: "Invalid file ID format" });
-            }
+            const fileId = Number(request.params.id);
 
             if (!request.file) {
                 return response.status(400).json({ message: "No new file uploaded" });
